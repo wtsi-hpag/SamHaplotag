@@ -21,10 +21,10 @@ install:
 - conda install -c conda-forge mamba
 - mamba create -q -n test-environment -c conda-forge -c bioconda -y clang=11 meson samtools $toolchain
 - conda activate test-environment
-- if [ "$TRAVIS_OS_NAME" = "osx" ]; then meson setup --buildtype=release builddir; fi
+- if [ "$TRAVIS_OS_NAME" = "osx" ]; then env CXX=$(pwd)/clang meson setup --buildtype=release builddir; fi
 - if [ "$TRAVIS_OS_NAME" = "linux" ]; then env CXX=clang meson setup --buildtype=release builddir; fi
 - cd builddir
-- meson compile
-- if ! meson test; then cat test.fq; fi
+- meson compile -j 1
+- meson test
 script:
 - echo "done"
