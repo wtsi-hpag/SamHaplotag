@@ -19,9 +19,12 @@ install:
 - if [ "$TRAVIS_OS_NAME" = "osx" ]; then export toolchain=clangxx_osx-64; fi
 - if [ "$TRAVIS_OS_NAME" = "linux" ]; then export toolchain=gxx_linux-64; fi
 - conda install -c conda-forge mamba
-- mamba create -q -n test-environment -c conda-forge -c bioconda -y clang=10 meson samtools $toolchain
+- mamba create -q -n test-environment -c conda-forge -c bioconda -y clang=11 meson samtools $toolchain
 - conda activate test-environment
-- env CXX=clang meson setup --buildtype=release builddir
+- if [ "$TRAVIS_OS_NAME" = "osx" ]; then meson setup --buildtype=release builddir; fi
+- if [ "$TRAVIS_OS_NAME" = "linux" ]; then env CXX=clang meson setup --buildtype=release builddir; fi
 - cd builddir
 - meson compile
 - meson test
+script:
+- echo "done"
