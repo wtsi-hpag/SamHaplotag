@@ -2,29 +2,21 @@ jobs:
   include:
   - os: linux
     dist: bionic
-  - os: osx
 language: c++
 install:
-- if [ "$TRAVIS_OS_NAME" = "osx" ]; then export conda_url=https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh;
-  fi
-- if [ "$TRAVIS_OS_NAME" = "linux" ]; then export conda_url=https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh;
-  fi
-- wget $conda_url -O miniconda.sh
+- wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
 - bash miniconda.sh -b -p $HOME/miniconda
 - source "$HOME/miniconda/etc/profile.d/conda.sh"
 - hash -r
 - conda config --set always_yes yes --set changeps1 no
 - conda update -q conda
 - conda info -a
-- if [ "$TRAVIS_OS_NAME" = "osx" ]; then export toolchain=clangxx_osx-64; fi
-- if [ "$TRAVIS_OS_NAME" = "linux" ]; then export toolchain=gxx_linux-64; fi
 - conda install -c conda-forge mamba
-- mamba create -q -n test-environment -c conda-forge -c bioconda -y clang=11 meson samtools $toolchain
+- mamba create -q -n test-environment -c conda-forge -c bioconda -y clang meson samtools gxx_linux-64
 - conda activate test-environment
-- if [ "$TRAVIS_OS_NAME" = "osx" ]; then env CXX=$(pwd)/clang meson setup --buildtype=release builddir; fi
-- if [ "$TRAVIS_OS_NAME" = "linux" ]; then env CXX=clang meson setup --buildtype=release builddir; fi
+- env CXX=clang meson setup --buildtype=release builddir
 - cd builddir
-- meson compile -j 1
+- meson compile
 - meson test
 script:
 - echo "done"
