@@ -26,5 +26,6 @@ install:
 - cd builddir
 - meson compile
 - meson test
+- cat meson-logs/testlog.txt
 script:
 - echo "done"
