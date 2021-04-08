@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/wtsi-hpag/SamHaplotag.svg?branch=main)](https://travis-ci.org/wtsi-hpag/SamHaplotag)
 # SamHaplotag
 Process haplotag barcodes in SAM format. Converts BC/QT barcode SAM tags into haplotag RX, QX and BX tags. See https://github.com/evolgenomics/haplotagging or https://www.fml.tuebingen.mpg.de/chan-group/haplotagging/?L=1 for details on haplotagging.
 
