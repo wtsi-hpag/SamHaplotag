@@ -25,6 +25,6 @@ install:
 - if [ "$TRAVIS_OS_NAME" = "linux" ]; then env CXX=clang meson setup --buildtype=release builddir; fi
 - cd builddir
 - meson compile
-- if ! meson test; then cat meson-logs/testlog.txt; fi
+- if ! meson test; then cat test.fq; fi
 script:
 - echo "done"
