@@ -1,8 +1,16 @@
 [![Build Status](https://travis-ci.org/wtsi-hpag/SamHaplotag.svg?branch=main)](https://travis-ci.org/wtsi-hpag/SamHaplotag)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/samhaplotag/badges/installer/conda.svg)](https://conda.anaconda.org/bioconda)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/samhaplotag/badges/downloads.svg)](https://anaconda.org/bioconda/samhaplotag)
 # SamHaplotag
 Process haplotag barcodes in SAM format. Converts BC/QT barcode SAM tags into haplotag RX, QX and BX tags. See https://github.com/evolgenomics/haplotagging or https://www.fml.tuebingen.mpg.de/chan-group/haplotagging/?L=1 for details on haplotagging.
 
 Also comes with a tool '10xSpoof' for converting haplotag barcodes into 10x compatible barcodes.
+
+# Bioconda
+SamHaplotag is available on [bioconda](https://bioconda.github.io/).<br/>
+```sh
+> conda install samhaplotag
+```
 
 # Example Usage
 ```bash
