@@ -33,10 +33,10 @@ jobs:
         fi
         
         mamba create -q -n test-environment -c conda-forge -c bioconda -y meson clang $toolchain samtools
-        conda activate test-environment
        
     - name: setup_meson
       run: |
+        conda activate test-environment
         if [ `uname` == Darwin ]; then
           meson setup --buildtype=release --unity on builddir
         else
@@ -45,8 +45,11 @@ jobs:
       
     - name: meson_compile
       run: |
+        conda activate test-environment
         cd builddir
         meson compile
     
     - name: meson_test
-      run: meson test
+      run: |
+        conda activate test-environment
+        meson test
