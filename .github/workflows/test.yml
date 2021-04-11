@@ -36,6 +36,8 @@ jobs:
        
     - name: setup_meson
       run: |
+        source "$HOME/miniconda/etc/profile.d/conda.sh"
+        hash -r
         conda activate test-environment
         if [ `uname` == Darwin ]; then
           meson setup --buildtype=release --unity on builddir
@@ -45,11 +47,16 @@ jobs:
       
     - name: meson_compile
       run: |
+        source "$HOME/miniconda/etc/profile.d/conda.sh"
+        hash -r
         conda activate test-environment
         cd builddir
         meson compile
     
     - name: meson_test
       run: |
+        source "$HOME/miniconda/etc/profile.d/conda.sh"
+        hash -r
         conda activate test-environment
+        cd builddir
         meson test
