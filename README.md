@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/wtsi-hpag/SamHaplotag.svg?branch=main)](https://travis-ci.org/wtsi-hpag/SamHaplotag)
+[![test](https://github.com/wtsi-hpag/SamHaplotag/actions/workflows/test.yml/badge.svg)](https://github.com/wtsi-hpag/SamHaplotag/actions/workflows/test.yml)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/samhaplotag/badges/installer/conda.svg)](https://conda.anaconda.org/bioconda)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/samhaplotag/badges/downloads.svg)](https://anaconda.org/bioconda/samhaplotag)
 # SamHaplotag
