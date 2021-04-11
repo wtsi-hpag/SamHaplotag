@@ -21,7 +21,7 @@ SOFTWARE.
 */
 
 #define ProgramName "SamHaplotag"
-#define ProgramVersion "0.0.1"
+#define ProgramVersion "0.0.2-dev"
 
 #include "Common.cpp"
 #include "BC.cpp"
@@ -32,6 +32,77 @@ Comp(u08 base)
 {
     u08 table[] = {'T', 0, 'G', 0, 0, 0, 'C', 0, 0, 0, 0, 0, 0, 'N', 0, 0, 0, 0, 0, 'A'};
     return(table[base-65]);
+}
+
+struct
+string_hash_table_node
+{
+    u08 *string;
+    string_hash_table_node *next;
+};
+
+struct
+string_hash_table
+{
+    string_hash_table_node **table;
+    u32 size;
+    u32 pad;
+};
+
+global_function
+string_hash_table *
+CreateStringHashTable(memory_arena *arena)
+{
+    u32 size = 131;
+
+    string_hash_table *table = PushStructP(arena, string_hash_table);
+    table->size = size;
+    table->table = PushArrayP(arena, string_hash_table_node *, size);
+    memset(table->table, 0, size * sizeof(string_hash_table_node *));
+
+    return(table);
+}
+
+global_function
+void
+AddStringToHashTable(string_hash_table *table, memory_arena *arena, u08 *string)
+{
+#define StringHashTableSeed 0xf30b603a1896576e
+    u32 hash = FastHash32(string, StringLength(string), StringHashTableSeed) % table->size;
+    string_hash_table_node *node = table->table[hash];
+    string_hash_table_node *prevNode = 0;
+
+    while (node)
+    {
+        prevNode = node;
+        node = node->next;
+    }
+
+    string_hash_table_node *newNode = PushStructP(arena, string_hash_table_node);
+    newNode->string = string;
+    newNode->next = 0;
+    (prevNode ? prevNode->next : table->table[hash]) = newNode;
+}
+
+global_function
+u08
+IsStringInHashTable(string_hash_table *table, memory_arena *arena, u08 *string)
+{
+    u32 hash = FastHash32(string, StringLength(string), StringHashTableSeed) % table->size;
+    string_hash_table_node *node = table->table[hash];
+    u08 result = 0;
+
+    while (node)
+    {
+        if (AreNullTerminatedStringsEqual(string, node->string))
+        {
+            result = 1;
+            break;
+        }
+        node = node->next;
+    }
+
+    return(result);
 }
 
 struct
@@ -266,6 +337,13 @@ MainArgs
         tagStat QT = null;
         tagStat FL = null;
 
+        u08 IDLine[64];
+        tagStat PG = null;
+        tagStat ID = null;
+        string_hash_table *ids = CreateStringHashTable(&workingSet);
+        u08 *lastID = 0;
+        //@PG     ID:samtools.21  PN:samtools     PP:samtools.20  VN:1.12 CL:samtools view -H PycharmProjects/HiLine/TestData/valid.cram
+
         buffer *readBuffer = GetNextBuffer_Read(readPool);
         buffer *writeBuffer = GetNextBuffer_Write(writePool);
         buffer *transferBuffer = GetNextTransferBuffer(transferBufferPool);
@@ -286,10 +364,65 @@ MainArgs
 
                 u08 character = readBuffer->buffer[bufferIndex];
 
-                if (headerMode && atEnd) headerMode = character == '@';
+                if (headerMode && atEnd) 
+                {
+                    headerMode = character == '@';
+                    if (!headerMode)
+                    {
+                        tagPtr = 0;
+                        
+                        u08 idBuff[64];
+                        stbsp_snprintf((char *)idBuff, sizeof(idBuff), "%s", ProgramName);
+                        u32 c = 0;
+                        while (IsStringInHashTable(ids, &workingSet, idBuff)) stbsp_snprintf((char *)idBuff, sizeof(idBuff), "%s.%u", ProgramName, ++c);
+                        
+                        u08 pgLine[512];
+                        u32 n = lastID ?    (u32)stbsp_snprintf((char *)pgLine, sizeof(pgLine), "@PG\tID:%s\tPN:%s\tPP:%s\tVN:%s\tCL:", idBuff, ProgramName, (char *)lastID, ProgramVersion) :
+                                            (u32)stbsp_snprintf((char *)pgLine, sizeof(pgLine), "@PG\tID:%s\tPN:%s\tVN:%s\tCL:", idBuff, ProgramName, ProgramVersion);
+                        
+                        ForLoop(ArgCount) n += (u32)stbsp_snprintf((char *)pgLine + n, sizeof(pgLine) - n, "%s ", ArgBuffer[index]);
+                        pgLine[n - 1] = '\n';
+
+                        if ((BufferSize - writeBuffer->size - 1) < n) writeBuffer = GetNextBuffer_Write(writePool);
+                        ForLoop(n) writeBuffer->buffer[writeBuffer->size++] = pgLine[index];
+                    }
+                }
                 atEnd = character == '\n';
 
-                if (!headerMode)
+                if (headerMode)
+                {
+                    if (character == '@') PG = readTag1;
+                    else if (PG == readTag1) PG = character == 'P' ? readTag2 : null;
+                    else if (PG == readTag2) PG = character == 'G' ? readTag3 : null;
+                    else if (PG == readTag3) PG = character == '\t' ? readTag4 : null;
+
+                    if (PG == readTag4 && character == '\t')
+                    {
+                        ID = readTag1;
+                        PG = null;
+                    }
+                    else if (ID == readTag1) ID = character == 'I' ? readTag2 : null;
+                    else if (ID == readTag2) ID = character == 'D' ? readTag3 : null;
+                    else if (ID == readTag3) 
+                    {
+                        ID = character == ':' ? readingData : null;
+                        tagPtr = 0;
+                    }
+                    else if (ID == readingData)
+                    {
+                        IDLine[tagPtr++] = character;
+                        if (character < 33)
+                        {
+                            ID = done;
+                            IDLine[tagPtr-1] = 0;
+                            u08 *str = PushArray(workingSet, u08, tagPtr);
+                            ForLoop((u32)tagPtr) str[index] = IDLine[index];
+                            AddStringToHashTable(ids, &workingSet, str);
+                            lastID = str;
+                        }
+                    }
+                }
+                else
                 {
                     if (namePtr < (sizeof(nameBuffer) - 1)) 
                     {
