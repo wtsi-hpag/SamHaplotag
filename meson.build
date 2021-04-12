@@ -10,8 +10,5 @@ if get_option('buildtype') == 'debug'
 endif
 
 thread_dep = dependency('threads')
-executable('SamHaplotag', 'SamHaplotag.cpp', dependencies : thread_dep, install : true, cpp_args : flags)
-executable('10xSpoof', '10xSpoof.cpp', dependencies : thread_dep, install : true, cpp_args : flags)
-
-Test = find_program('Test/run.sh')
-test('Test', Test)
+test('test SamHaplotag', executable('SamHaplotag', 'SamHaplotag.cpp', dependencies : thread_dep, install : true, cpp_args : flags), args : '--help')
+test('test 10xSpoof', executable('10xSpoof', '10xSpoof.cpp', dependencies : thread_dep, install : true, cpp_args : flags), args : '--help')
