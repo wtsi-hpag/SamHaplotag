@@ -21,7 +21,7 @@ SOFTWARE.
 */
 
 #define ProgramName "SamHaplotag"
-#define ProgramVersion "0.0.2-dev"
+#define ProgramVersion "0.0.2"
 
 #include "Common.cpp"
 #include "BC.cpp"
