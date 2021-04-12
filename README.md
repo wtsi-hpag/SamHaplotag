@@ -29,4 +29,3 @@ meson compile
 meson test
 meson install
 ```
-note that [Samtools](http://www.htslib.org/) must be on your PATH for the tests to run
