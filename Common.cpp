@@ -38,6 +38,9 @@ SOFTWARE.
 
 #include "WAVLTree.cpp"
 
+#define String_(x) #x
+#define String(x) String_(x)
+
 global_variable
 char
 Message_Buffer[1024];

@@ -21,9 +21,11 @@ SOFTWARE.
 */
 
 #define ProgramName "10xSpoof"
-#define ProgramVersion "0.0.1"
 
 #include "Common.cpp"
+
+#define ProgramVersion String(PV)
+
 #include "10x.cpp"
 
 struct
