@@ -1,7 +1,7 @@
 project('SamHaplotag', 'cpp',
     license: 'MIT',
     meson_version: '>=0.57.1',
-    version: '0.0.3'
+    version: '0.0.4'
 )
 
 flags = ['-Ofast']

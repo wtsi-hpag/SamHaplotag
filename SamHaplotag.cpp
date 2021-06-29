@@ -254,40 +254,93 @@ MainArgs
     char *missingTagsLogName = (char *)"SamHaplotag_Missing_BC_QT_tags";
     char *clearBCLogName = (char *)"SamHaplotag_Clear_BC";
     char *unclearBCLogName = (char *)"SamHaplotag_UnClear_BC";
-    
-    if (ArgCount > 1 && AreNullTerminatedStringsEqual((u08 *)"--help", (u08 *)ArgBuffer[1])) 
+
+    u08 revComp = 0;
+    u08 outputRXQX = 0;
+    u08 showHelp = 0;
+    const char *prefix = 0;
+
+    ForLoop(ArgCount - 1)
     {
-        fprintf(stderr, ProgramName " " ProgramVersion "\nUsage: <sam format> | " ProgramName " <prefix>? | <sam format>\n\n");
+        if (ArgBuffer[index + 1][0] == '-' && ArgBuffer[index + 1][1] != '-' && ArgBuffer[index + 1][1])
+        {
+            const char *ptr = ArgBuffer[index + 1] + 1;
+            while (*ptr)
+            {
+                if (*ptr == 'r') revComp = 1;
+                else if (*ptr == 'x') outputRXQX = 1;
+                else if (*ptr == 'h') showHelp = 1;
+                else if (*ptr == 'p')
+                {
+                    if (!(*(ptr + 1)) && index < (ArgCount - 2)) prefix = ArgBuffer[index++ + 2];
+                    else
+                    {
+                        PrintError("Error, prefix option requires an argument");
+                        exitCode = EXIT_FAILURE;
+                        goto End;
+                    }
+                }
+                ++ptr;
+            }
+        }
+        else if (!strcmp(ArgBuffer[index + 1], "--revcomp")) revComp = 1;
+        else if (!strcmp(ArgBuffer[index + 1], "--rxqx")) outputRXQX = 1;
+        else if (!strcmp(ArgBuffer[index + 1], "--help")) showHelp = 1;
+        else if (!strcmp(ArgBuffer[index + 1], "--prefix"))
+        {
+            if (index < (ArgCount - 2)) prefix = ArgBuffer[index++ + 2];
+            else
+            {
+                PrintError("Error, prefix option requires an argument");
+                exitCode = EXIT_FAILURE;
+                goto End;
+            }
+        }
+    }
+
+    if (showHelp) 
+    {
+        fprintf(stderr, ProgramName " " ProgramVersion "\nUsage: <sam format> | " ProgramName " | <sam format>\n\n");
         
         fprintf(stderr, "Reads/writes SAM formatted reads from <stdin>/<stdout>.\n");
-        fprintf(stderr, "Any reads flagged as <read1> with both BC and QT tags will have additional haplotag RX, QX and BX tags added.\n\n");
+        fprintf(stderr, "Any reads flagged as <read1> with both BC and QT tags will have additional haplotag BX tag added.\n\n");
         
         fprintf(stderr, "BC tags must be of the form /^[ATGCN]{13}\\-[ATGCN]{13}$/ and QT tags of the form /^[!-~]{13}\\w[!-~]{13}$/.\n");
         fprintf(stderr, "e.g. '... BC:Z:NGGTACATGAGAC-NTATCGGCCTTCA\tQT:Z:!FFFFFFFFFFFF !,,,F,FFF:F:F ...'\n\n");
-       
-        fprintf(stderr, "Three log files: '%s', '%s' and '%s' are created with an optional '<prefix>_' at the start of each file-name if supplied as an argument.\n\n", clearBCLogName, unclearBCLogName, missingTagsLogName);
+        
+        fprintf(stderr, "Three log files: '%s', '%s' and '%s' are created with an optional '<prefix>_' at the start of each file-name if supplied as an option.\n\n", clearBCLogName, unclearBCLogName, missingTagsLogName);
+        
+        fprintf(stderr, "Options:\n");
+        fprintf(stderr, "   -r/--revcomp:       Reverse-complement second barcode (BD) group\n");
+        fprintf(stderr, "   -x/--rxqx:          Output additional raw barcode/quality RX/QX tags\n");
+        fprintf(stderr, "   -p/--prefix PREFIX: Add prefix to log files\n");
+        fprintf(stderr, "   -h/--help:          Show help\n\n");
 
         fprintf(stderr, "Usage example:\n");
-        fprintf(stderr, "samtools view -h@ 16 -F 0xF00 reads_123.cram | " ProgramName " 123 | samtools view -@ 16 -o tagged_reads_123.cram\n");
+        fprintf(stderr, "samtools view -h@ 16 -F 0xF00 reads_123.cram | " ProgramName " -p 123 | samtools view -@ 16 -o tagged_reads_123.cram\n");
         
         goto End;
     }
     
     char logNameBuffer[256];
-    if (ArgCount > 1)
+    if (prefix)
     {
-        s32 ptr1 = 1 + stbsp_snprintf((char *)logNameBuffer, (s32)sizeof(logNameBuffer), "%s_%s", ArgBuffer[1], missingTagsLogName);
+        s32 ptr1 = 1 + stbsp_snprintf((char *)logNameBuffer, (s32)sizeof(logNameBuffer), "%s_%s", prefix, missingTagsLogName);
         missingTagsLogName = (char *)logNameBuffer;
 
-        s32 ptr2 = 1 + stbsp_snprintf((char *)logNameBuffer + ptr1, (s32)sizeof(logNameBuffer) - ptr1, "%s_%s", ArgBuffer[1], clearBCLogName);
+        s32 ptr2 = 1 + stbsp_snprintf((char *)logNameBuffer + ptr1, (s32)sizeof(logNameBuffer) - ptr1, "%s_%s", prefix, clearBCLogName);
         clearBCLogName = (char *)logNameBuffer + ptr1;
 
-        stbsp_snprintf((char *)logNameBuffer + ptr1 + ptr2, (s32)sizeof(logNameBuffer) - ptr1 - ptr2, "%s_%s", ArgBuffer[1], unclearBCLogName);
+        stbsp_snprintf((char *)logNameBuffer + ptr1 + ptr2, (s32)sizeof(logNameBuffer) - ptr1 - ptr2, "%s_%s", prefix, unclearBCLogName);
         unclearBCLogName = (char *)logNameBuffer + ptr1 + ptr2;
     }
 
     PrintStatus("Starting...");
-    
+    PrintStatus("Run options:");
+    PrintStatus("\tReverse-complement BD group: %s", revComp ? "yes" : "no");
+    PrintStatus("\tOutput RX/QX tags: %s", outputRXQX ? "yes" : "no");
+    PrintStatus("\tLog prefix: %s", prefix ? prefix : "<NA>");
+
     s32 missingTagsLog, clearBCLog, unclearBCLog;
     if (    (missingTagsLog = open((const char *)missingTagsLogName, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) > 0 &&
             (clearBCLog = open((const char *)clearBCLogName, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) > 0 &&
@@ -344,7 +397,6 @@ MainArgs
         tagStat ID = null;
         string_hash_table *ids = CreateStringHashTable(&workingSet);
         u08 *lastID = 0;
-        //@PG     ID:samtools.21  PN:samtools     PP:samtools.20  VN:1.12 CL:samtools view -H PycharmProjects/HiLine/TestData/valid.cram
 
         buffer *readBuffer = GetNextBuffer_Read(readPool);
         buffer *writeBuffer = GetNextBuffer_Write(writePool);
@@ -496,41 +548,44 @@ MainArgs
                         {
                             if (BC == done && QT == done)
                             {
-                                u32 totalNewSpace = (2 * (6 + 27)) + 6 + 12;
+                                u32 totalNewSpace = (outputRXQX ? (2 * (6 + 27)) : 0) + 6 + 12;
                                 if ((BufferSize - writeBuffer->size - 1) < totalNewSpace) writeBuffer = GetNextBuffer_Write(writePool);
 
-                                u08 revComBuffer[13];
-                                ForLoop(13) revComBuffer[index] = Comp(BCBuffer[sizeof(BCBuffer) - index - 1]);
+                                u08 BDBuffer[13];
+                                ForLoop(13) BDBuffer[index] = revComp ? Comp(BCBuffer[sizeof(BCBuffer) - index - 1]) : BCBuffer[14 + index];
+                                
+                                if (outputRXQX)
+                                {
+                                    // RX
+                                    writeBuffer->buffer[writeBuffer->size++] = '\t';
+                                    writeBuffer->buffer[writeBuffer->size++] = 'R';
+                                    writeBuffer->buffer[writeBuffer->size++] = 'X';
+                                    writeBuffer->buffer[writeBuffer->size++] = ':';
+                                    writeBuffer->buffer[writeBuffer->size++] = 'Z';
+                                    writeBuffer->buffer[writeBuffer->size++] = ':';
+                                    ForLoop(13) writeBuffer->buffer[writeBuffer->size++] = BCBuffer[index];
+                                    writeBuffer->buffer[writeBuffer->size++] = '+';
+                                    ForLoop(13) writeBuffer->buffer[writeBuffer->size++] = BDBuffer[index];
 
-                                // RX
-                                writeBuffer->buffer[writeBuffer->size++] = '\t';
-                                writeBuffer->buffer[writeBuffer->size++] = 'R';
-                                writeBuffer->buffer[writeBuffer->size++] = 'X';
-                                writeBuffer->buffer[writeBuffer->size++] = ':';
-                                writeBuffer->buffer[writeBuffer->size++] = 'Z';
-                                writeBuffer->buffer[writeBuffer->size++] = ':';
-                                ForLoop(13) writeBuffer->buffer[writeBuffer->size++] = BCBuffer[index];
-                                writeBuffer->buffer[writeBuffer->size++] = '+';
-                                ForLoop(13) writeBuffer->buffer[writeBuffer->size++] = revComBuffer[index];
-
-                                // QX
-                                writeBuffer->buffer[writeBuffer->size++] = '\t';
-                                writeBuffer->buffer[writeBuffer->size++] = 'Q';
-                                writeBuffer->buffer[writeBuffer->size++] = 'X';
-                                writeBuffer->buffer[writeBuffer->size++] = ':';
-                                writeBuffer->buffer[writeBuffer->size++] = 'Z';
-                                writeBuffer->buffer[writeBuffer->size++] = ':';
-                                ForLoop(13) writeBuffer->buffer[writeBuffer->size++] = QTBuffer[index];
-                                writeBuffer->buffer[writeBuffer->size++] = '+';
-                                ForLoop(13) writeBuffer->buffer[writeBuffer->size++] = QTBuffer[sizeof(QTBuffer) - index - 1];
+                                    // QX
+                                    writeBuffer->buffer[writeBuffer->size++] = '\t';
+                                    writeBuffer->buffer[writeBuffer->size++] = 'Q';
+                                    writeBuffer->buffer[writeBuffer->size++] = 'X';
+                                    writeBuffer->buffer[writeBuffer->size++] = ':';
+                                    writeBuffer->buffer[writeBuffer->size++] = 'Z';
+                                    writeBuffer->buffer[writeBuffer->size++] = ':';
+                                    ForLoop(13) writeBuffer->buffer[writeBuffer->size++] = QTBuffer[index];
+                                    writeBuffer->buffer[writeBuffer->size++] = '+';
+                                    ForLoop(13) writeBuffer->buffer[writeBuffer->size++] = QTBuffer[revComp ? (sizeof(QTBuffer) - index - 1) : (14 + index)];
+                                }
 
                                 // BX
                                 u08 BXBuffer[13];
 
                                 u08 a = GetBC_A(BCBuffer + 7);
-                                u08 b = GetBC_B(revComBuffer + 7);
+                                u08 b = GetBC_B(BDBuffer + 7);
                                 u08 c = GetBC_C(BCBuffer);
-                                u08 d = GetBC_D(revComBuffer);
+                                u08 d = GetBC_D(BDBuffer);
 
                                 transferBuffer->buffer[transferBuffer->size++] = a;
                                 transferBuffer->buffer[transferBuffer->size++] = b;
